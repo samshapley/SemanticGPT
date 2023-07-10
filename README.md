@@ -1,4 +1,4 @@
-# SemanticGPT Project
+# SemanticGPT
 
 SemanticGPT is a project that explores the ability of OpenAI's GPT-4 to generate semantic networks based on word relations. It uses logit biasing to suppress certain outputs and guide the model's responses in a certain way. It uses this approach to create word paths (sequences of related words) which are then visualized as a semantic network.
 
