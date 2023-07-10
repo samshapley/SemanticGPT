@@ -1,6 +1,7 @@
 import nltk
 from nltk.corpus import brown
-from SemanticGPT.logit_bias import LogitBias
+import sys
+from logit_bias import LogitBias
 import json
 import time
 import random
@@ -8,60 +9,50 @@ from tqdm import tqdm
 
 nltk.download('brown')
 
-def get_word_paths(API_KEY: str, MODEL: str, DICTIONARY: list, EXTRA_SUPPRESSED_TOKENS: list[int], BIAS: int, TEMPERATURE: float, MAX_WORDS: int) -> dict: 
-    word_paths = {} 
-
-    # Randomize the order of the words in the dictionary
-    # random.shuffle(DICTIONARY)
-
-    
-    for word in tqdm(DICTIONARY): 
-
-        suppressed_phrases = [word]
-        logit_bias_generator = LogitBias(API_KEY, MODEL, suppressed_phrases, EXTRA_SUPPRESSED_TOKENS, BIAS) 
-        word_path = [] 
-
-        system_message = "Repeat the word. Only respond with a real word. Assume all words entered are real words."
-
-        
-        try: 
-            for _ in range(MAX_WORDS): 
-                PROMPT = f"{word}" 
-                response = next(logit_bias_generator.generate_responses(PROMPT, 1, TEMPERATURE, system_message)) 
-                if response == word:
-                    print(f"word duplicated, {word}")
-                word_path.append(response) 
-                suppressed_phrases.append(response)
-                logit_bias_generator = LogitBias(API_KEY, MODEL, suppressed_phrases, EXTRA_SUPPRESSED_TOKENS, BIAS)
-
-                time.sleep(0.1) # sleep for 0.1 seconds to avoid hitting the API rate limit 
-        except Exception as e:
-            print(f"Exception for word {word}: {e}")
-
-        word_paths[word] = word_path 
-
-        # every 100 words, save the word paths to a file, appending new words, not overwriting
-        if len(word_paths) % 100 == 0:
-            save_to_file(word_paths, "word_paths.json")
-
-
-
-    return word_paths
-
 def save_to_file(word_paths: dict, filename: str) -> None: 
     with open(filename, 'w') as f: 
         json.dump(word_paths, f)
 
+def suppression_loop(API_KEY: str, MODEL: str, suppression_word: str, temperature: float=0, request_timeout: int=10, max_words: int=10) -> list:
+    BIAS = -100
+    suppressed_phrases = [suppression_word]
+    logit_bias_generator = LogitBias(API_KEY, MODEL, suppressed_phrases, BIAS, request_timeout=request_timeout)
+    word_path = []
+    system_message = "You can only produce real single words. Repeat the word you see in the prompt."
+    
+    try: 
+        for _ in range(max_words):
+            PROMPT = f"{suppression_word}"
+            response = logit_bias_generator.generate_response(PROMPT, temperature, system_message)
+            word_path.append(response)
+            suppressed_phrases.append(response)
+            logit_bias_generator = LogitBias(API_KEY, MODEL, suppressed_phrases, BIAS, request_timeout=request_timeout)
+            time.sleep(0.1) # sleep for 0.1 seconds to avoid hitting the API rate limit 
+    except Exception as e:
+        print(f"Exception for word {suppression_word}: {e}")
+    
+    return word_path
+
 if __name__ == "__main__": 
-    API_KEY = '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' 
-    MODEL = "gpt-4-0613"
+    API_KEY = 'API_KEY' 
+    MODEL = "gpt-3.5-turbo"
     word_freqs = nltk.FreqDist(w.lower() for w in brown.words())
     DICTIONARY = [word for word, freq in word_freqs.most_common(10000)] # using the 10000 most common words 
+    random.shuffle(DICTIONARY)
     # save dictionary to file
     save_to_file(DICTIONARY, "dictionary.json")
     EXTRA_SUPPRESSED_TOKENS = [] 
     BIAS = -100 
     TEMPERATURE = 0 
-    MAX_WORDS = 3 # Change this to control the number of words for each path (increases run time order something or whatever)
-    word_paths = get_word_paths(API_KEY, MODEL, DICTIONARY, EXTRA_SUPPRESSED_TOKENS, BIAS, TEMPERATURE, MAX_WORDS) 
-    save_to_file(word_paths, "word_paths_gpt-4.json")
+    MAX_WORDS = 1 # Change this to control the number of words for each path (increases run time order something or whatever)
+    
+    word_paths = {} 
+    for word in tqdm(DICTIONARY):
+        word_path = suppression_loop(API_KEY, MODEL, word, TEMPERATURE, 10, MAX_WORDS)
+        word_paths[word] = word_path
+        if len(word_paths) % 5 == 0:
+            save_to_file(word_paths, "word_paths_test.json")
+
+    save_to_file(word_paths, "word_paths_test.json")
+
+

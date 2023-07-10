@@ -7,7 +7,7 @@ with open("word_paths.json", 'r') as f:
     word_paths = json.load(f)
 
 # choose 100 words
-word_paths = {k: word_paths[k] for k in list(word_paths)[:5000]}
+word_paths = {k: word_paths[k] for k in list(word_paths)[:100]}
 
 # Create a directed graph
 G = nx.DiGraph()
