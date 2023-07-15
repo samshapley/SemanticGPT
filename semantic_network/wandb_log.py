@@ -18,4 +18,10 @@ data = [(k, *words) for k, words in items if len(words) == 3]
 
 table = wandb.Table(columns=['Suppression Word', 'Response 1', 'Response 2', 'Response 3'], data=data)
 wandb.log({'table': table})
+
+# Read and log the word_graph.html file
+with open('word_graph.html', 'r') as f:
+    html_content = f.read()
+wandb.log({'word_graph': wandb.Html(html_content)})
+
 wandb.finish()
