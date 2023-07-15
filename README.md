@@ -22,7 +22,7 @@ The project consists of several Python scripts and a Jupyter Notebook:
 Before running the scripts, install the required Python libraries:
 
 ```
-pip install nltk pyvis networkx tqdm pandas matplotlib wandb
+pip install -r requirements.txt
 ```
 
 Next, you'll need to set your OpenAI GPT-4 API key as an environment variable:
